@@ -21,7 +21,6 @@ jackson-core-asl-1.8.3.jar-----http://mirrors.ibiblio.org/pub/mirrors/maven2/org
 jackson-jaxrs-1.8.3.jar-----http://mirrors.ibiblio.org/pub/mirrors/maven2/org/codehaus/jackson/jackson-jaxrs/1.8.3/jackson-jaxrs-1.8.3.jar
 jackson-mapper-asl-1.8.3.jar-----http://mirrors.ibiblio.org/pub/mirrors/maven2/org/codehaus/jackson/jackson-mapper-asl/1.8.3/jackson-mapper-asl-1.8.3.jar
 jackson-xc-1.8.3.jar-----http://mirrors.ibiblio.org/pub/mirrors/maven2/org/codehaus/jackson/jackson-xc/1.8.3/jackson-xc-1.8.3.jar
-jaxb-api.jar-----http://download.java.net/maven/1/javax.xml.bind/jars/jaxb-api-2.1.jar
 jaxb-impl-2.1.12.jar-----http://download.java.net/maven/1/com.sun.xml.bind/jars/jaxb-impl-2.1.12.jar
 jaxb-xjc.jar-----http://download.java.net/maven/1/com.sun.xml.bind/jars/jaxb-xjc-2.1.11.jar
 jax-qname.jar-----http://www.docjar.com/jar/jax-qname.jar
