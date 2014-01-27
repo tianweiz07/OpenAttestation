@@ -38,6 +38,6 @@ cd $JAR_SOURCE_DIRCTORY
 cp commons-collections-2.1.1.jar commons-collections.jar 
 cp commons-logging-1.0.4.jar commons-logging.jar
 cp jaxb-impl-2.1.12.jar jaxb-impl.jar
-cp bcprov-jdk15-143.jar bcprov-jdk15-129.jar 
-mv bcprov-jdk15-143.jar bcprov-jdk15-141.jar
+cp ../bcprov-jdk15-143.jar bcprov-jdk15-129.jar 
+mv ../bcprov-jdk15-143.jar bcprov-jdk15-141.jar
 
