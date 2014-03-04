@@ -11,7 +11,6 @@ echo "ServerName localhost" >> /etc/apache2/httpd.conf
 /etc/init.d/apache2 restart
 
 cd $OAT_PATH/Source
-./download_jar_packages.sh
 ./distribute_jar_packages.sh
 
 cd $OAT_PATH/Installer
