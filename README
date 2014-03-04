@@ -5,3 +5,7 @@
 	The integrated software is hosted and operated by cloud service providers
 
 	For further details, please read docucuments in ~/docs
+	
+	Tianwei's modification:
+		Add two scripts for installing the server and client side: oat_server_install.sh and oat_client_install.sh
+		delete download_jar_packages.sh, and download all the packages in ~/JAR_SOURCE, so do not need to run download_jar_packages.sh anymore
