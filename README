@@ -8,7 +8,7 @@
 	
 	
 	
-	Tianwei's notes:
+	Installation:
 	
 	1. Server configuration:
 		In /etc/hosts: add the ip address of each node in the system:
