@@ -44,6 +44,17 @@ import javax.jws.WebResult;
 import javax.jws.WebService;
 import javax.xml.ws.soap.Addressing;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.PreparedStatement;
+
 import org.apache.log4j.Logger;
 
 import com.sun.xml.ws.developer.Stateful;
@@ -86,6 +97,46 @@ public class HisWebService {
 		nonceSelect.setNonce(HisUtil.generateSecureRandom(20));
 		nonceSelect.setSelect(HisUtil.unHexString(Constants.PCR_SELECT));
 		nonceSelect.setQuote(NonceSelect.Quote.QUOTE1);
+		
+		Connection con = null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		int row_size;
+
+		String url = "jdbc:mysql://localhost:3306/oat_db";
+		String user = "root";
+		String password = "";
+
+		try {
+			con = DriverManager.getConnection(url, user, password);
+			st = con.prepareStatement("SELECT * FROM attest_request");
+			rs = st.executeQuery();
+			rs.last();
+			row_size = rs.getRow();
+			if (row_size > 0) {
+				while ((rs.getInt("id") != row_size)&&(rs.getRow()>0)) 
+					rs.previous();
+				if (rs.getRow()>0) { 
+					nonceSelect.setsecproperty(HisUtil.unHexString(rs.getString("security_property")));
+					nonceSelect.setvid(HisUtil.unHexString(rs.getString("vm_id")));
+				}
+			}
+			else {
+				nonceSelect.setsecproperty(HisUtil.unHexString("FFFFFFFF"));
+				nonceSelect.setvid(HisUtil.unHexString("FFFFFFFF"));
+			}
+        	} catch (SQLException ex) {}
+		finally {
+			try {
+				if (rs != null) 
+					rs.close();
+				if (st != null) 
+					st.close();
+				if (con != null) 
+					con.close();
+			} catch (SQLException ex) {}
+		}
+		
 		return nonceSelect;
 	}
 
