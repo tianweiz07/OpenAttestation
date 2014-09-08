@@ -43,6 +43,10 @@ import gov.niarl.sal.webservices.hisWebServices.clientWsImport.Quote;
 import java.util.Properties;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -163,6 +167,8 @@ public class StandaloneHIS
     String nonce="";
     //This is the raw bitmask as sent by the web service
     String rawBitmask="";
+    String secproperty="";
+    String vid="";
     //global String for the applications working directory
     String hisPath="./";
     //The type of appraiser registration to use, manual or auto
@@ -1502,6 +1508,14 @@ public class StandaloneHIS
         System.out.println("Quote type = "+quoteType);
         nonce = hexString(nonceSelect.getNonce());
         rawBitmask = hexString(nonceSelect.getSelect());
+        secproperty = hexString(nonceSelect.getsecproperty());
+        vid = hexString(nonceSelect.getvid());
+        try {
+                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("/root/log", true)));
+                out.println("Security Property: " + secproperty);
+                out.println("VMid: " + vid);
+                out.close();
+        } catch (Exception e) {}
         
     }
     
