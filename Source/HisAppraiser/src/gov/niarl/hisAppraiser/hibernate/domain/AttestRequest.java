@@ -49,6 +49,10 @@ public class AttestRequest {
 	
 	private Date validateTime; 
 	
+	private String securityProperty;
+	
+	private String vmId;
+	
 	public Date getValidateTime() {
 		return validateTime;
 	}
@@ -169,5 +173,21 @@ public class AttestRequest {
 
 	public void setRequestHost(String requestHost) {
 		this.requestHost = requestHost;
+	}
+	
+	public String getSecurityProperty() {
+		return securityProperty;
+	}
+
+	public void setSecurityProperty(String securityProperty) {
+		this.securityProperty = securityProperty;
+	}
+	
+	public String getVmId() {
+		return vmId;
+	}
+
+	public void setVmId(String vmId) {
+		this.vmId = vmId;
 	}
 }
