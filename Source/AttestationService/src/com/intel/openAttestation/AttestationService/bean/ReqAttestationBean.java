@@ -25,6 +25,10 @@ public class ReqAttestationBean {
 	
 	private String PCRmask;
 	
+	private List<String> property;
+	
+	private List<String> id;
+	
     public ReqAttestationBean(){
     	
     }
@@ -52,6 +56,22 @@ public class ReqAttestationBean {
 	public void setPCRmask(String pCRmask) {
 		PCRmask = pCRmask;
 	}
+	
+	public List<String> getProperty() {
+		return property;
+	}
 
+	public void setProperty(List<String> property) {
+		this.property = property;
+	}
+	
+	public List<String> getId() {
+		return id;
+	}
+
+	public void setId(List<String> id) {
+		this.id = id;
+	}
+	
 	
 }
