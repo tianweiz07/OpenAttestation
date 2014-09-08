@@ -20,6 +20,8 @@
 	    <property name="isSync" column="is_sync"/>
 	    <property name="result"></property>
 	    <property name="validateTime" column="validate_time"></property>
+	    <property name="securityProperty" column="security_property"/>
+	    <property name="vmId" column="vm_id"/>
 	</class>
 </hibernate-mapping>
 
