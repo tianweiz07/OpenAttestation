@@ -95,19 +95,31 @@ public class NonceSelect {
 		this.select = select;
 	}
 	
-	public byte[] getvid() {
+	/**
+	 * @return the vmid
+	 */
+	public byte[] getVid() {
 		return vid;
 	}
-	
-	public void setvid(byte[] vid) {
+
+	/**
+	 * @param select the vmid to set
+	 */
+	public void setVid(byte[] vid) {
 		this.vid = vid;
 	}
 	
-	public byte[] getsecproperty() {
+	/**
+	 * @return the security property
+	 */
+	public byte[] getSecproperty() {
 		return secproperty;
 	}
-	
-	public void setsecproperty(byte[] secproperty) {
+
+	/**
+	 * @param select the property to set
+	 */
+	public void setSecproperty(byte[] secproperty) {
 		this.secproperty = secproperty;
 	}
 }
