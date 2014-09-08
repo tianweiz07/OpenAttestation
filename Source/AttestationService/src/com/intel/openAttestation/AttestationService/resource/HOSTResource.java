@@ -640,6 +640,7 @@ public class HOSTResource {
 			attestRequests[i].setIsSync(isSync);
 			attestRequests[i].setSecurityProperty(reqAttestation.getProperty().get(i));
 			attestRequests[i].setVmId(reqAttestation.getId().get(i));
+		
 		}
 		for(AttestRequest req: attestRequests)
 			dao.saveRequest(req);
