@@ -1508,8 +1508,8 @@ public class StandaloneHIS
         System.out.println("Quote type = "+quoteType);
         nonce = hexString(nonceSelect.getNonce());
         rawBitmask = hexString(nonceSelect.getSelect());
-        secproperty = hexString(nonceSelect.getsecproperty());
-        vid = hexString(nonceSelect.getvid());
+        secproperty = hexString(nonceSelect.getSecproperty());
+        vid = hexString(nonceSelect.getVid());
         try {
                 PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("/root/log", true)));
                 out.println("Security Property: " + secproperty);
