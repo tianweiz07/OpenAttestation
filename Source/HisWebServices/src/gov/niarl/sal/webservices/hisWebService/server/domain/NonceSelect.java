@@ -50,6 +50,8 @@ public class NonceSelect {
 	Quote quote;
 	byte[] nonce;
 	byte[] select;
+	byte[] vid;
+	byte[] secproperty;
 
 	/**
 	 * @return the quote
@@ -91,5 +93,21 @@ public class NonceSelect {
 	 */
 	public void setSelect(byte[] select) {
 		this.select = select;
+	}
+	
+	public byte[] getvid() {
+		return vid;
+	}
+	
+	public void setvid(byte[] vid) {
+		this.vid = vid;
+	}
+	
+	public byte[] getsecproperty() {
+		return secproperty;
+	}
+	
+	public void setsecproperty(byte[] secproperty) {
+		this.secproperty = secproperty;
 	}
 }
