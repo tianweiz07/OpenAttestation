@@ -27,7 +27,9 @@ CREATE TABLE `attest_request` (
   `PCRMask` varchar(50) DEFAULT NULL,
   `result` int(11) DEFAULT NULL,
   `is_sync` tinyint(1) DEFAULT NULL,
-  `validate_time` datetime DEFAULT NULL,  
+  `validate_time` datetime DEFAULT NULL, 
+  `security_property` varchar(50) DEFAULT NULL,
+  `vm_id` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FK_audit_log_id` (`audit_log_id`),
   KEY `UNIQUE` (`request_id`,`host_id`)
