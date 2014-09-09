@@ -757,6 +757,46 @@ public class StandaloneHIS
         s_logger.debug("Nonce recieved: "+nonce); 
         s_logger.debug("Bitmask recieved: "+rawBitmask);
 
+        //Trigger the attestation measurements
+        int exe_time=0;
+        int exitVal=99999;
+        Runtime rt = Runtime.getRuntime();
+        
+        try
+        {
+        	Process proc = rt.exec("/root/attestation_kernel" + " " + vid " " + secproperty);
+        	//now loop until we get a return value or we reach a timeout 
+        	while(exe_time<=blockingTimeout)
+        	{
+        		try
+        		{
+        			exitVal = proc.exitValue();
+        		}
+        		catch(Exception e)
+        		{
+        			//if the process has not completed we get an exception, just catch and loop
+        			Thread.sleep(1);
+        		}
+        		if(exitVal!=99999)
+        		{
+        			break;
+        		}
+        		exe_time++;
+        	}
+        	//if i has reached the blocking timeout value we need to throw an error
+        	if(exe_time>=blockingTimeout)
+        	{
+        		//kill the process
+        		proc.destroy();
+        	}
+        }
+        catch(Throwable t)
+        {
+        	t.printStackTrace();
+        	System.out.println("Cannot execute the attestation_kernel");
+        	s_logger.error("Cannot execute the attestation_kernel", t);
+        }
+
         //convert the raw bitmask to one that we can use
         try
         {
@@ -1510,13 +1550,6 @@ public class StandaloneHIS
         rawBitmask = hexString(nonceSelect.getSelect());
         secproperty = hexString(nonceSelect.getSecproperty());
         vid = hexString(nonceSelect.getVid());
-        try {
-                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("/root/log", true)));
-                out.println("Security Property: " + secproperty);
-                out.println("VMid: " + vid);
-                out.close();
-        } catch (Exception e) {}
-        
     }
     
     /** Marshalls the integrity report object into a string format and sends it to the server via a web service
