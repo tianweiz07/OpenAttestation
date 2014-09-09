@@ -67,7 +67,9 @@ public class AttestService {
 			} else {
 				flag = false;
 			}
-			
+			// This is the place for property interpretation. 
+			// You can get meta data from the database based on the requestId in the attestRequest. 
+			// Then set the flag as true (trusted) or false(untrusted).
 			if (!flag){
 				attestRequest.setResult(ResultConverter.getIntFromResult(AttestResult.UN_TRUSTED));
 			}
