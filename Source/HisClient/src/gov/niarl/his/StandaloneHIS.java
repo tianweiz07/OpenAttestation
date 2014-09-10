@@ -764,7 +764,7 @@ public class StandaloneHIS
         
         try
         {
-        	Process proc = rt.exec("/root/attestation_kernel" + " " + vid + " " + secproperty);
+        	Process proc = rt.exec("/root/attestation_kernel" + " " + vid + " " + secproperty + " -lcrypto -lssl");
         	//now loop until we get a return value or we reach a timeout 
         	while(exe_time<=blockingTimeout)
         	{
