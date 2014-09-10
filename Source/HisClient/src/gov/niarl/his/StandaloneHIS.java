@@ -758,8 +758,6 @@ public class StandaloneHIS
         s_logger.debug("Bitmask recieved: "+rawBitmask);
 
         //Trigger the attestation measurements
-        if ((vid!=null)&&(secproperty!=null))
-        {
             int exe_time=0;
             int exitVal=99999;
             Runtime rt = Runtime.getRuntime();
@@ -798,7 +796,6 @@ public class StandaloneHIS
         	System.out.println("Cannot execute the attestation_kernel");
         	s_logger.error("Cannot execute the attestation_kernel", t);
             }
-        }
 
         //convert the raw bitmask to one that we can use
         try
