@@ -125,7 +125,10 @@ public class HisWebService {
 				nonceSelect.setSecproperty(HisUtil.unHexString("FFFFFFFF"));
 				nonceSelect.setVid(HisUtil.unHexString("FFFFFFFF"));
 			}
-        	} catch (SQLException ex) {}
+        	} catch (SQLException ex) {
+        		nonceSelect.setSecproperty(HisUtil.unHexString("FFFFFFFF"));
+			nonceSelect.setVid(HisUtil.unHexString("FFFFFFFF"));
+        	}
 		finally {
 			try {
 				if (rs != null) 
