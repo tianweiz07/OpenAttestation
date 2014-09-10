@@ -105,7 +105,7 @@ public class HisWebService {
 
 		String url = "jdbc:mysql://localhost:3306/oat_db";
 		String user = "root";
-		String password = "";
+		String password = "adminj310a";
 
 		try {
 			con = DriverManager.getConnection(url, user, password);
