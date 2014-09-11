@@ -119,7 +119,7 @@ public class NonceSelect {
 	/**
 	 * @param select the property to set
 	 */
-	public String setSecproperty(String secproperty) {
+	public void setSecproperty(String secproperty) {
 		this.secproperty = secproperty;
 	}
 }
