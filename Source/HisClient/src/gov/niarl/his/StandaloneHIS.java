@@ -764,7 +764,7 @@ public class StandaloneHIS
         
             try
             {
-        	Process proc = rt.exec("/OAT/attestation_kernel" + " " + vid.toLowerCase() + " " + secproperty);
+        	Process proc = rt.exec("/OAT/attestation_kernel" + " " + vid + " " + secproperty);
         	//now loop until we get a return value or we reach a timeout 
         	while(exe_time<=blockingTimeout)
         	{
@@ -1548,8 +1548,8 @@ public class StandaloneHIS
         System.out.println("Quote type = "+quoteType);
         nonce = hexString(nonceSelect.getNonce());
         rawBitmask = hexString(nonceSelect.getSelect());
-        secproperty = hexString(nonceSelect.getSecproperty());
-        vid = hexString(nonceSelect.getVid());
+        secproperty = nonceSelect.getSecproperty();
+        vid = nonceSelect.getVid();
     }
     
     /** Marshalls the integrity report object into a string format and sends it to the server via a web service
