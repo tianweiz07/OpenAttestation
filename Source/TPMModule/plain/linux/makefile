@@ -37,7 +37,7 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: NIARL_TPM_Module
+all: NIARL_TPM_Module attestation_kernel
 
 # Tool invocations
 NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
@@ -46,10 +46,12 @@ NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
 	g++ -o"NIARL_TPM_Module" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
+attestation_kernel
+	gcc -o attestation_kernel attestation_kernel.c -lcrypto -lssl
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) NIARL_TPM_Module
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) NIARL_TPM_Module attestation_kernel
 	-@echo ' '
 
 .PHONY: all clean dependents
