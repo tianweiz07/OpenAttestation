@@ -50,8 +50,8 @@ public class NonceSelect {
 	Quote quote;
 	byte[] nonce;
 	byte[] select;
-	byte[] vid;
-	byte[] secproperty;
+	String vid;
+	String secproperty;
 
 	/**
 	 * @return the quote
@@ -98,28 +98,28 @@ public class NonceSelect {
 	/**
 	 * @return the vmid
 	 */
-	public byte[] getVid() {
+	public String getVid() {
 		return vid;
 	}
 
 	/**
 	 * @param select the vmid to set
 	 */
-	public void setVid(byte[] vid) {
+	public void setVid(String vid) {
 		this.vid = vid;
 	}
 	
 	/**
 	 * @return the security property
 	 */
-	public byte[] getSecproperty() {
+	public String getSecproperty() {
 		return secproperty;
 	}
 
 	/**
 	 * @param select the property to set
 	 */
-	public void setSecproperty(byte[] secproperty) {
+	public String setSecproperty(String secproperty) {
 		this.secproperty = secproperty;
 	}
 }
