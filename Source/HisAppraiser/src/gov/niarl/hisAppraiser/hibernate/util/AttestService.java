@@ -73,7 +73,7 @@ public class AttestService {
 //						if(!whiteList.get(i).getPcrDigest().equalsIgnoreCase(pcrs.get(pcrNumber))){
 //							flag = false;
 //							break;
-						}
+//						}
 				}
 			} else {
 				flag = false;
