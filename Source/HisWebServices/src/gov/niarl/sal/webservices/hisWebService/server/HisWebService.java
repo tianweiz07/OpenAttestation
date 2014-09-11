@@ -117,17 +117,17 @@ public class HisWebService {
 				while ((rs.getInt("id") != row_size)&&(rs.getRow()>0)) 
 					rs.previous();
 				if (rs.getRow()>0) { 
-					nonceSelect.setSecproperty(HisUtil.unHexString(rs.getString("security_property")));
-					nonceSelect.setVid(HisUtil.unHexString(rs.getString("vm_id")));
+					nonceSelect.setSecproperty(rs.getString("security_property"));
+					nonceSelect.setVid(rs.getString("vm_id"));
 				}
 			}
 			else {
-				nonceSelect.setSecproperty(HisUtil.unHexString("FFFFFFFF"));
-				nonceSelect.setVid(HisUtil.unHexString("FFFFFFFF"));
+				nonceSelect.setSecproperty("FFFFFFFF");
+				nonceSelect.setVid("FFFFFFFF");
 			}
         	} catch (SQLException ex) {
-        		nonceSelect.setSecproperty(HisUtil.unHexString("FFFFFFFF"));
-			nonceSelect.setVid(HisUtil.unHexString("FFFFFFFF"));
+        		nonceSelect.setSecproperty("FFFFFFFF");
+			nonceSelect.setVid("FFFFFFFF");
         	}
 		finally {
 			try {
