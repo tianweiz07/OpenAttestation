@@ -46,7 +46,8 @@ NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
 	g++ -o"NIARL_TPM_Module" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
-attestation_kernel
+	
+attestation_kernel:
 	gcc -o attestation_kernel attestation_kernel.c -lcrypto -lssl
 
 # Other Targets
