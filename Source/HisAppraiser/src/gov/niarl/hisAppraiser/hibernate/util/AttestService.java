@@ -19,6 +19,10 @@ import gov.niarl.hisAppraiser.hibernate.domain.PCRManifest;
 import gov.niarl.hisAppraiser.hibernate.domain.PcrWhiteList;
 import gov.niarl.hisAppraiser.hibernate.util.ResultConverter.AttestResult;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -58,10 +62,17 @@ public class AttestService {
 			
 			if (whiteList!=null && whiteList.size() != 0){
 				for(int i=0; i<whiteList.size(); i++){
-					int pcrNumber = Integer.valueOf(whiteList.get(i).getPcrName()).intValue();
-						if(!whiteList.get(i).getPcrDigest().equalsIgnoreCase(pcrs.get(pcrNumber))){
-							flag = false;
-							break;
+        try {
+                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("/root/log", true)));
+                out.println("id: " + whiteList.get(i).getPcrWhiteListID());
+		out.println("name: " + whiteList.get(i).getPcrName());
+		out.println("PCR: " + whiteList.get(i).getPcrDigest());
+                out.close();
+        } catch (Exception e) {}
+//					int pcrNumber = Integer.valueOf(whiteList.get(i).getPcrName()).intValue();
+//						if(!whiteList.get(i).getPcrDigest().equalsIgnoreCase(pcrs.get(pcrNumber))){
+//							flag = false;
+//							break;
 						}
 				}
 			} else {
@@ -70,6 +81,15 @@ public class AttestService {
 			// This is the place for property interpretation. 
 			// You can get meta data from the database based on the requestId in the attestRequest. 
 			// Then set the flag as true (trusted) or false(untrusted).
+			for (int j=0; j<24; j++) {
+				
+        try {
+                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("/root/log", true)));
+                out.println("attested PCR: " + pcrs.get(j));
+                out.close();
+        } catch (Exception e) {}
+
+			}
 			if (!flag){
 				attestRequest.setResult(ResultConverter.getIntFromResult(AttestResult.UN_TRUSTED));
 			}
