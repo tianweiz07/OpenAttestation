@@ -196,6 +196,13 @@ LinuxOatInstall()
   else
     ShowLogFaild "$OATSOURCE_DIRECTORY/TPMModule/plain/linux/NIARL_TPM_Module"
   fi
+  
+  if test -e $OATSOURCE_DIRECTORY/TPMModule/plain/attestation_kernel;then
+    cp $OATSOURCE_DIRECTORY/TPMModule/plain/linux/attestation_kernel linuxOatInstall
+    cp linuxOatInstall/attestation_kernel linuxOatInstall/exe
+  else
+    ShowLogFaild "$OATSOURCE_DIRECTORY/TPMModule/plain/linux/attestation_kernel"
+  fi
 
 
 #  if test -e ./NIARL_OAT_Standalone.tar.gz;then
