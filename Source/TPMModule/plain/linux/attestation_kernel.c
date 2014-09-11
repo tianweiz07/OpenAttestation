@@ -11,6 +11,8 @@
 
 int main(int argc, char *argv[])
 {
+    if (strncmp(argv[2], "FFFFFFFF", 100) == 0)
+        return 0;
     int pcr_index = atoi(argv[2]);
 
     char file_address[256];
