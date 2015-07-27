@@ -4,7 +4,7 @@
 
 OAT_PATH=/root/OpenAttestation
 
-apt-get install -y openjdk-6-jdk libtspi-dev zip ant g++ make git apache2 mysql-client mysql-server mysql-common php5 php5-mysql openssl
+apt-get install -y openjdk-6-jdk libtspi-dev zip ant g++ make git apache2 mysql-client mysql-server mysql-common php5 php5-mysql openssl libmysql-java
 
 echo "ServerName localhost" >> /etc/apache2/httpd.conf
 
