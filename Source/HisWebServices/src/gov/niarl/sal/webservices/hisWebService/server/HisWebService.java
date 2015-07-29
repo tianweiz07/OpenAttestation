@@ -114,7 +114,7 @@ public class HisWebService {
 			rs.last();
 			row_size = rs.getRow();
 			if (row_size > 0) {
-				while ((rs.getInt("id") != row_size)&&(rs.getRow()>0)) 
+				while ((!(rs.getString("host_name").equals(machineName)))&&(rs.getRow()>0))
 					rs.previous();
 				if (rs.getRow()>0) { 
 					nonceSelect.setSecproperty(rs.getString("security_property"));
