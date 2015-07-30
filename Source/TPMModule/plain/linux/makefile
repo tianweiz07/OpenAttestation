@@ -48,7 +48,7 @@ NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
 	@echo ' '
 	
 attestation_kernel:
-	gcc -o attestation_kernel attestation_kernel.c -lcrypto -lssl
+	gcc -o attestation_kernel attestation_kernel.c
 
 # Other Targets
 clean:
