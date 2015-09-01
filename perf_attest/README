@@ -5,7 +5,7 @@ Add each server ip address in file /etc/hosts.
 Set up the nfs server:
 server:
 	apt-get install nfs-kernel-server portmap
-	mkdir /export/images
+	mkdir -p /exports/images
 	chown nobody:nogroup /export/images
 	modify /etc/exports:
 		/exports/images    192.168.1.0/24(rw,no_root_squash)
