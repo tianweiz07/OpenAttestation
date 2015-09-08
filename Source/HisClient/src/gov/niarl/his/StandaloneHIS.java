@@ -160,7 +160,7 @@ public class StandaloneHIS
     Properties hisProperties = new Properties();
 
     //The timeout in approximate ms for any blocking function to wait for a process to return
-    int blockingTimeout=10000;
+    int blockingTimeout=30000;
     int splashDuration = 3000;
     
     //The nonce for the TPM quote
