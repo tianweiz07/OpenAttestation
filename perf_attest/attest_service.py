@@ -15,7 +15,12 @@ import os
 import time
 import sys
 import threading
-import MySQLdb
+#import MySQLdb
+import getopt
+import locale
+import argparse
+import vcpupin
+import migrate
 from math import log
 
 OAT_SERVER='nebula6'
@@ -25,7 +30,15 @@ ATTEST_HOST = "nebula1"
 ATTEST_VM = "38f332c5-a1cc-3fb1-1dc4-efcf1ee503bc"
 REFERENCE_HOST = "nebula2"
 REFERENCE_VM = "19c1125f-6719-679b-309e-0685cf803041"
-EVENT_MASK = "1e7"
+EVENT_MASK = "1"
+
+USER_NAME = "palms_admin"
+DEST_HOST = "nebula2"
+
+MAX_ALARM = 4
+KS_THRESHOLD = 0.275
+INTERVAL = 15
+
 
 def connect_db(table):
     db = MySQLdb.connect(host="localhost", port = 3306, user= "root", passwd="adminj310a", db="oat_db")
@@ -53,32 +66,32 @@ def get_entry(host_name):
     result1 = [row for row in results if row[2].lower() == host_name]
     return result1[-1]
 
-def get_value(event, entry):
-    if event == "instructions":
+def get_value(prob_index, entry):
+    if prob_index == 0:
         index = 4
-    if event == "L1-dcache-loads":
+    if prob_index == 1:
         index = 5
-    if event == "L1-dcache-stores":
+    if prob_index == 2:
         index = 11
-    if event == "L1-icache-loads":
+    if prob_index == 3:
         index = 12
-    if event == "L1-icache-stores":
+    if prob_index == 4:
         index = 6
-    if event == "LLC-loads":
+    if prob_index == 5:
         index = 7
-    if event == "LLC-stores":
+    if prob_index == 6:
         index = 13
-    if event == "LLC-load-misses":
+    if prob_index == 7:
         index = 14
-    if event == "LLC-store-misses":
+    if prob_index == 8:
         index = 15
+    if prob_index == 9:
+        index = 16
 
     value_str=""
-    for i in range(16):
-        value_str += entry[index][15-i]
-    return int(value_str)
-
-
+    for i in range(7):
+        value_str += entry[index][6-i]
+    return float(value_str)/1000000
 
 def security_attest():
     threads = []
@@ -91,47 +104,31 @@ def security_attest():
     while (t1.isAlive() or t2.isAlive()):
         pass
 
-def instr_ratio():
-    REFERENCE_instr = get_value("instructions", get_entry(REFERENCE_HOST))
-    ATTEST_instr = get_value("instructions", get_entry(ATTEST_HOST))
-    return float(REFERENCE_instr)/float(ATTEST_instr)
+def KS_calculate():
+    D = 0.0
+    for i in range(10):
+        pro1 = get_value(i, get_entry(REFERENCE_HOST))
+        pro2 = get_value(i, get_entry(ATTEST_HOST))
+        D = max(D, pro1-pro2, pro2-pro1)
+    return D
 
-def llc_kl():
-    REFERENCE_llc_loads = get_value("LLC-loads", get_entry(REFERENCE_HOST))
-    REFERENCE_llc_stores = get_value("LLC-stores", get_entry(REFERENCE_HOST))
-    REFERENCE_llc_load_misses = get_value("LLC-load-misses", get_entry(REFERENCE_HOST))
-    REFERENCE_llc_store_misses = get_value("LLC-store-misses", get_entry(REFERENCE_HOST))
-    ATTEST_llc_loads = get_value("LLC-loads", get_entry(ATTEST_HOST))
-    ATTEST_llc_stores = get_value("LLC-stores", get_entry(ATTEST_HOST))
-    ATTEST_llc_load_misses = get_value("LLC-load-misses", get_entry(ATTEST_HOST))
-    ATTEST_llc_store_misses = get_value("LLC-store-misses", get_entry(ATTEST_HOST))
+def main(argv):
+    alarm_num = 0
+    while(0):
+	start_time = time.time()
+        security_attest()
+        D = KS_calculate()
+        if (D > KS_THRESHOLD):
+            alarm_num = alarm_num + 1
+            if (alarm_num == MAX_ALARM):
+                alarm_num = 0
+                if (EVENT_MASK == "4"):
+		    vcpupin.vcpu_pin(ATTEST_VM, ATTEST_HOST, USER_NAME)
+                if (EVENT_MASK == "1"):
+                    migrate.vm_migrate(ATTEST_VM, ATTEST_HOST, USER_NAME, DEST_HOST, USERNAME)
 
-    REFERENCE_p = (float(REFERENCE_llc_load_misses)+float(REFERENCE_llc_store_misses))/(float(REFERENCE_llc_loads)+float(REFERENCE_llc_stores))
-    ATTEST_p = (float(ATTEST_llc_load_misses)+float(ATTEST_llc_store_misses))/(float(ATTEST_llc_loads)+float(ATTEST_llc_stores))
+        while (time.time() - start_time < 15):
+		pass
 
-    if (REFERENCE_p > 1 or ATTEST_p > 1):
-        LLC_KL = 0
-    else:
-        LLC_KL = REFERENCE_p*log(REFERENCE_p/ATTEST_p) + (1-REFERENCE_p)*log((1-REFERENCE_p)/(1-ATTEST_p))
-
-    return LLC_KL
-
-def bus_kl():
-    REFERENCE_l1d_loads = get_value("L1-dcache-loads", get_entry(REFERENCE_HOST))
-    REFERENCE_l1d_stores = get_value("L1-dcache-stores", get_entry(REFERENCE_HOST))
-    REFERENCE_l1i_loads = get_value("L1-icache-loads", get_entry(REFERENCE_HOST))
-    REFERENCE_l1i_stores = get_value("L1-icache-stores", get_entry(REFERENCE_HOST))
-    ATTEST_l1d_loads = get_value("L1-dcache-loads", get_entry(ATTEST_HOST))
-    ATTEST_l1d_stores = get_value("L1-dcache-stores", get_entry(ATTEST_HOST))
-    ATTEST_l1i_loads = get_value("L1-icache-loads", get_entry(ATTEST_HOST))
-    ATTEST_l1i_stores = get_value("L1-icache-stores", get_entry(ATTEST_HOST))
-
-    REFERENCE_p = (float(REFERENCE_l1d_loads) + float(REFERENCE_l1d_stores) + float(REFERENCE_l1i_loads) + float(REFERENCE_l1i_stores))
-    ATTEST_p = (float(ATTEST_l1d_loads) + float(ATTEST_l1d_stores) + float(ATTEST_l1i_loads) + float(ATTEST_l1i_stores))
-    BUS_KL = log(REFERENCE_p/ATTEST_p)
-    return BUS_KL
-
-security_attest()
-print instr_ratio()
-print llc_kl()
-print bus_kl()
+if __name__ == "__main__":
+    main(sys.argv[1:])
