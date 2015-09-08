@@ -126,7 +126,8 @@ def main(argv):
 		    vcpupin.vcpu_pin(ATTEST_VM, ATTEST_HOST, USER_NAME)
                 if (EVENT_MASK == "1"):
                     migrate.vm_migrate(ATTEST_VM, ATTEST_HOST, USER_NAME, DEST_HOST, USERNAME)
-
+	else:
+		alarm_num = 0
         while (time.time() - start_time < 15):
 		pass
 
