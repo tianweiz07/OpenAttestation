@@ -180,12 +180,17 @@ void process_data(char* output, int perf_mask) {
 
 	}
 
-	int cum_sum = 0;
-	for (i=0; i<INTERVAL_NUM; i++) {
-		cum_sum += prob_num[i];
-		prob[i] = cum_sum*1.0/sum;
+	if (sum == 0) {
+		for (i=0; i<INTERVAL_NUM; i++)
+			prob[i] = 0;
 	}
-
+	else {
+		int cum_sum = 0;
+		for (i=0; i<INTERVAL_NUM; i++) {
+			cum_sum += prob_num[i];
+			prob[i] = cum_sum*1.0/sum;
+		}
+	}
 	return;
 }
 
