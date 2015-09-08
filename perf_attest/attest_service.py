@@ -123,7 +123,7 @@ def main(argv):
             if (alarm_num == MAX_ALARM):
                 alarm_num = 0
                 if (EVENT_MASK == "4"):
-		    vcpupin.vcpu_pin(ATTEST_VM, ATTEST_HOST, USER_NAME)
+	            vcpupin.vcpu_pin(ATTEST_VM, ATTEST_HOST, USER_NAME)
                 if (EVENT_MASK == "1"):
                     migrate.vm_migrate(ATTEST_VM, ATTEST_HOST, USER_NAME, DEST_HOST, USERNAME)
 	else:
