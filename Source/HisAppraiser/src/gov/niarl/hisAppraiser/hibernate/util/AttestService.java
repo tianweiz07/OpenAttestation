@@ -127,6 +127,7 @@ public class AttestService {
 	}
 
 	public static boolean CheckAvailability(String measure_value){
+		boolean flag = true;
 		int cpu_value = Integer.parseInt(measure_value.substring(0, 2));
 		if (cpu_value > 30) {
 			flag = true;
@@ -155,7 +156,7 @@ public class AttestService {
 		}
 		int eval_index = 0;
 		for (int i=0; i<30; i++) {
-			if (bin[i]*30>big_sum) {
+			if (bin[i]*30>bin_sum) {
 				eval_index = eval_index+1;
 			}
 		}
