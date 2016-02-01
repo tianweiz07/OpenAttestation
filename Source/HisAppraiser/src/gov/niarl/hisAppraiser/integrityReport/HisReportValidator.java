@@ -335,8 +335,8 @@ public class HisReportValidator {
 				previousReportDifferences = sb.append(DIFFERENCE_SEPARATOR).append(Integer.toString(i)).append(DIFFERENCE_SEPARATOR).toString();
 				errors.add("PCR value " + Integer.toString(i) + " is not in the current report.");
 			} else if (!getPcrValue(i).equalsIgnoreCase(hisReportValidator.getPcrValue(i))) {
-				previousReportDifferences = sb.append(DIFFERENCE_SEPARATOR).append(Integer.toString(i)).append(DIFFERENCE_SEPARATOR).toString();
-				errors.add("PCR value " + Integer.toString(i) + " is different than the value in the previous report.");
+//				previousReportDifferences = sb.append(DIFFERENCE_SEPARATOR).append(Integer.toString(i)).append(DIFFERENCE_SEPARATOR).toString();
+//				errors.add("PCR value " + Integer.toString(i) + " is different than the value in the previous report.");
 			}
 		}
 		logger.info("----------end comparing to previous report----------");
