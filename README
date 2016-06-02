@@ -1,35 +1,3 @@
-	OpenAttestation project is to provide SDK, Software Development Kit, to add cloud management tools with capability of establishing hosts integrity information by remotely retrieving and verifying Hosts' integrity with TPM quote.
+Modified code for CloudMonatt.
 
-	The SDK is expected to be integrated, and enhanced with security features, into 3rd party cloud management software, and distributed by ISV to cloud providers
-
-	The integrated software is hosted and operated by cloud service providers
-
-	For further details, please read docucuments in ~/docs
-	
-	
-	
-	Installation:
-	
-	1. Server configuration:
-		In /etc/hosts: add the ip address of each node in the system:
-			127.0.0.1	nebula1
-			172.16.0.2	nebula2
-			......
-	2. Follow oat_server_install.sh to install OpenAttestation Server;
-		To delete:
-			dpkg -r oat-appraiser-base-oatapp
-		To verify:
-			http://<server.domain>/OAT/
-		To reboot machine:
-			service tomcat6 restart
-			
-	3. Follow oat_client_install.sh to install OpenAttestation Client;
-		
-	4. Trigger attestation command in ./CommandTool:
-		./oat_cert -h nebula1
-		curl --cacert certfile.cer -H "Content-Type: application/json" -X POST -d '{"hosts":["nebula1"]}' "https://nebula1:8443/AttestationService/resources/PollHosts" -ssl3	
-		
-
-	Modification log:		
-	1. Add two scripts for installing the server and client side: oat_server_install.sh and oat_client_install.sh
-	2. Delete download_jar_packages.sh, and download all the packages in ~/JAR_SOURCE, so do not need to run download_jar_packages.sh anymore
+The attestation_kernel is used to profile the VMs on the Xen, for integrity, confidentiality and availability attestation
