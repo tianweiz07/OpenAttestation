@@ -1,3 +1,5 @@
 Modified code for CloudMonatt.
 
 The attestation_kernel is used to profile the VMs on the Xen, for integrity, confidentiality and availability attestation
+
+This is for Memory DoS attacks detection
