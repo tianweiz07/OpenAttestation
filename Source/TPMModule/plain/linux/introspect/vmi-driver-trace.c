@@ -231,14 +231,17 @@ event_response_t driver_enter_cb(vmi_instance_t vmi, vmi_event_t *event){
     return 0;
 }
 
-int introspect_driver_trace (char *name) {
+int introspect_driver_trace (char *uuid) {
+    char name[256];
+    convert_name(uuid, name);
 
     char _line[256];
     char _name[256];
     char _offset[256];
 
     char file_address[256];
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/metadata");
     FILE *_file = fopen(file_address, "r");
 
@@ -261,7 +264,8 @@ int introspect_driver_trace (char *name) {
      */
     num_mod = 0;
 
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/whitelist.txt");
     _file = fopen(file_address, "r");
 

@@ -1,6 +1,9 @@
 #include "vmi.h"
 
-int introspect_syscall_check(char *name) {
+int introspect_syscall_check(char *uuid) {
+    char name[256];
+    convert_name(uuid, name);
+
     vmi_instance_t vmi;
     addr_t sys_call_table_addr, sys_call_addr, kernel_start, kernel_end;
     int count_syscall = 0;
@@ -14,7 +17,8 @@ int introspect_syscall_check(char *name) {
 
 
     char file_address[256];
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/syscall_index");
     FILE *_file = fopen(file_address, "r");
 

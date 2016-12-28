@@ -44,7 +44,10 @@ int get_ip_addr(char *name, char *ip_addr) {
     return 0;
 }
 
-int introspect_process_list (char *name) {
+int introspect_process_list (char *uuid) {
+    char name[256];
+    convert_name(uuid, name);
+
     vmi_instance_t vmi;
     addr_t list_head = 0, next_list_entry = 0, current_process = 0;
     vmi_pid_t pid = 0;
@@ -92,7 +95,8 @@ int introspect_process_list (char *name) {
     char _name[256];
     char _offset[256];
     char file_address[256];
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/metadata");
     FILE *_file; 
     switch(vmi_get_ostype(vmi)) {
@@ -175,7 +179,7 @@ int introspect_process_list (char *name) {
     int count_proc = 0;
     for (i=0; i<(int)rlp.rlim_max; i++) {
         if (pid_dict[i] == -1) {
-            introspect_process_kill(vmi, name, i);
+            introspect_process_kill(vmi, uuid, i);
             count_proc ++;
         }
     }

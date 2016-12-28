@@ -83,8 +83,29 @@ public class AttestService {
 			String securityProperty = attestRequest.getSecurityProperty();
 			String vmId = attestRequest.getVmId();
 			
-			// add interpretation code later here
-			flag = true;
+			// introspection interpretation
+			int intp_index = Integer.parseInt(securityProperty);
+			if (intp_index == 1 || intp_index == 2 || intp_index == 3 || intp_index == 4) {
+				String measure_value = pcrs.get(intp_index);
+				int num_vul = Integer.parseInt(measure_value.substring(0, 16));
+				if (num_vul == 0) {
+					flag = true;
+				} else {
+					flag = false;
+				}
+			}
+			if (intp_index == 5 || intp_index == 6 || intp_index == 7) {
+				String measure_value = pcrs.get(intp_index+10);
+				int num_vul = Integer.parseInt(measure_value.substring(0, 16));
+				if (num_vul == 0) {
+					flag = true;
+				} else {
+					flag = false;
+				}
+			}
+			if (intp_index == 51 || intp_index == 52 || intp_index == 61 || intp_index == 62 || intp_index == 71 || intp_index == 72) {
+				flag = true;
+			}
 			
 			if (!flag){
 				attestRequest.setResult(ResultConverter.getIntFromResult(AttestResult.UN_TRUSTED));

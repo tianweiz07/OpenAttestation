@@ -87,7 +87,10 @@ event_response_t kill_enter_cb(vmi_instance_t vmi, vmi_event_t *event){
     return 0;
 }
 
-int introspect_process_kill (vmi_instance_t vmi, char *name, vmi_pid_t pid) {
+int introspect_process_kill (vmi_instance_t vmi, char *uuid, vmi_pid_t pid) {
+
+    char name[256];
+    convert_name(uuid, name);
 
     KILL_PID = pid;
     kill_flag = -1;

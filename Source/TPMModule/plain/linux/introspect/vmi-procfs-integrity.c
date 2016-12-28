@@ -1,7 +1,9 @@
 #include "vmi.h"
 
-int introspect_procfs_check(char *name)
-{
+int introspect_procfs_check(char *uuid) {
+    char name[256];
+    convert_name(uuid, name);
+
     vmi_instance_t vmi;
     addr_t init_net_addr, pde_addr, name_addr, tcp_addr, show_addr;
     addr_t stext, etext;
@@ -26,7 +28,8 @@ int introspect_procfs_check(char *name)
     char _offset[256];
 
     char file_address[256];
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/metadata");
     FILE *_file = fopen(file_address, "r");
 

@@ -23,7 +23,6 @@
 
 #define FILE_LOCATION "/root/tpm-emulator/PCR_VALUE"
 #define IMAGE_LOCATION "/opt/stack/data/nova/instances/"
-#define SYMBOL_LOCATION "/home/palms_admin/VMI"
 
 /* task_struct offsets */
 unsigned long tasks_offset;
@@ -99,24 +98,55 @@ static int read_pcr(int pcr_index) {
     return (int)strtol(value, NULL, 16);
 }
 
+static int convert_name(char *uuid, char *name) {
+
+    char cursor;
+    char file_address[256];
+
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
+    strcat(file_address, "/libvirt.xml");
+
+    FILE *image_file = fopen(file_address, "rb");
+    assert(image_file);
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    char *ret;
+
+    while ((read = getline(&line, &len, image_file)) != -1) {
+        if (line=strstr(line, "<name>")) {
+            name = strtok(line, ">");
+            name = strtok(NULL, ">");
+            name = strtok(name, "<");
+            break;
+        }
+    }
+
+    fclose(image_file);
+
+    return 0;
+}
+
 static int interrupted = 0;
 
 static void close_handler(int sig){
     interrupted = sig;
 }
 
-int introspect_process_list(char *name);
+int introspect_process_list(char *uuid);
 
-int introspect_syscall_check(char *name);
+int introspect_syscall_check(char *uuid);
 
-int introspect_idt_check(char *name);
+int introspect_idt_check(char *uuid);
 
-int introspect_procfs_check(char *name);
+int introspect_procfs_check(char *uuid);
 
-int introspect_socket_trace(char *name);
+int introspect_socket_trace(char *uuid);
 
-int introspect_driver_trace(char *name);
+int introspect_driver_trace(char *uuid);
 
-int introspect_process_block(char *name);
+int introspect_process_block(char *uuid);
 
-int introspect_process_kill(vmi_instance_t vmi, char *name, vmi_pid_t);
+int introspect_process_kill(vmi_instance_t vmi, char *uuid, vmi_pid_t);

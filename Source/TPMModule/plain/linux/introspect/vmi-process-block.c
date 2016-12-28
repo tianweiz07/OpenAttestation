@@ -258,7 +258,10 @@ event_response_t execve_enter_cb(vmi_instance_t vmi, vmi_event_t *event){
     return 0;
 }
 
-int introspect_process_block (char *name) {
+int introspect_process_block (char *uuid) {
+    char name[256];
+    convert_name(uuid, name);
+
     strcpy(mount_src, "/dev/mapper/");
     strcat(mount_src, name);
     strcat(mount_src, "-root");
@@ -294,7 +297,8 @@ int introspect_process_block (char *name) {
     unsigned char sig[MD5_DIGEST_LENGTH];
 
     char file_address[256];
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/blacklist.txt");
     FILE *_file = fopen(file_address, "r");
 
@@ -317,7 +321,8 @@ int introspect_process_block (char *name) {
     /**
      * file struct offsets can be obtained by running findpwd 
      */
-    strcpy(file_address, SYMBOL_LOCATION);
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
     strcat(file_address, "/metadata");
     _file = fopen(file_address, "r");
 
