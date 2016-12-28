@@ -6,6 +6,8 @@
 
 RM := rm -rf
 
+CODE_DIR = introspect
+
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir.mk
@@ -48,11 +50,13 @@ NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
 	@echo ' '
 	
 attestation_kernel:
-	gcc -o attestation_kernel attestation_kernel.c -lcrypto -lssl
+	$(MAKE) -C $(CODE_DIR)
+	cp $(CODE_DIR)/attestation_kernel ./
 
 # Other Targets
 clean:
 	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) NIARL_TPM_Module attestation_kernel
+	$(MAKE) -C $(CODE_DIR) clean
 	-@echo ' '
 
 .PHONY: all clean dependents
