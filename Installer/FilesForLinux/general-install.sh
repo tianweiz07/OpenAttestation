@@ -49,7 +49,6 @@ cp -f OAT.properties /OAT
 cp -f TrustStore.jks /OAT
 cp -f NIARL_TPM_Module /OAT
 cp -f attestation_kernel /OAT
-cp -f formats /OAT
 
 rm -f /OAT/uninstallOAT.sh
 echo "/etc/init.d/OATClient stop" >> /OAT/uninstallOAT.sh

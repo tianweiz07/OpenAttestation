@@ -42,129 +42,6 @@ import com.sun.jersey.api.client.WebResource;
 
 public class AttestService {
 	
-	public static String GetKernelId(String securityProperty, String vmId){
-		Connection con = null;
-		PreparedStatement st = null;
-		ResultSet rs = null;
-		int row_size;
-		String url = "jdbc:mysql://nebula1:3306/nova";
-		String user = "root";
-		String password = "adminj310a";
-
-		String kernel_id = null;
-
-		try {
-			con = DriverManager.getConnection(url, user, password);
-			st = con.prepareStatement("SELECT * FROM instance_system_metadata");
-			rs = st.executeQuery();
-			rs.last();
-			row_size = rs.getRow();
-			if (row_size > 0) {
-				while (rs.getRow()>0) {
-					if ( (rs.getString("instance_uuid").equals(vmId)) && (rs.getString("key").equals("image_kernel_id"))) {
-						kernel_id = rs.getString("value");
-						break;
-					}
-					else {
-						rs.previous();
-					}
-				}
-			}
-    	   	} catch (SQLException ex) {}
-		finally {
-			try {
-				if (rs != null) 
-					rs.close();
-				if (st != null) 
-					st.close();
-				if (con != null) 
-					con.close();
-			} catch (SQLException ex) {}
-		}
-		return kernel_id;
-	}	
-	
-	public static boolean CheckKernelIntegrity(String kernel_id, String measure_value){
-		Connection con = null;
-		PreparedStatement st = null;
-		ResultSet rs = null;
-		int row_size;
-		String url = "jdbc:mysql://nebula1:3306/oat_db";
-		String user = "root";
-		String password = "adminj310a";
-
-		boolean flag = false;
-
-		try {
-			con = DriverManager.getConnection(url, user, password);
-			st = con.prepareStatement("SELECT * FROM PCR_WHITE_LIST");
-			rs = st.executeQuery();
-			rs.last();
-			row_size = rs.getRow();
-			if (row_size > 0) {
-				while (rs.getRow()>0) {
-					if ( (rs.getString("PCR_NAME").equals(kernel_id)) ) {
-						flag = rs.getString("PCR_DIGEST").equals(measure_value);
-						break;
-					}
-					else {
-						rs.previous();
-					}
-				}
-			}
-    	   	} catch (SQLException ex) {}
-		finally {
-			try {
-				if (rs != null) 
-					rs.close();
-				if (st != null) 
-					st.close();
-				if (con != null) 
-					con.close();
-			} catch (SQLException ex) {}
-		}
-		return flag;
-	}
-
-	public static boolean CheckAvailability(String measure_value){
-		boolean flag = true;
-		int cpu_value = Integer.parseInt(measure_value.substring(0, 2));
-		if (cpu_value > 30) {
-			flag = true;
-		}
-		else {
-			flag = false;
-		}
-		return flag;
-	}
-
-	public static boolean CheckConfidentiality(String measure_value1,String measure_value2) {
-		int[] bin = new int[30];
-		boolean flag = true;
-		for (int i=0; i<20; i++) {
-			bin[i] = Integer.parseInt(measure_value1.substring(i*2, i*2+2));
-		}
-		for (int i=20; i<30; i++) {
-			bin[i] = Integer.parseInt(measure_value2.substring(i*2-40, i*2-38));
-		}
-		int bin_sum = 0;
-		for (int i=0; i<30; i++) {
-			bin_sum = bin_sum + bin[i];
-		}
-		if (bin_sum == 0) {
-			return flag;
-		}
-		int eval_index = 0;
-		for (int i=0; i<30; i++) {
-			if (bin[i]*30>bin_sum) {
-				eval_index = eval_index+1;
-			}
-		}
-		if (eval_index > 1) {
-			flag = false;
-		}
-		return flag;
-	}
 	/**
 	 * validate PCR value of a request. Here is 4 cases, that is timeout, unknown, trusted and untrusted.
 	 * case1 (timeout): attest's time is greater than default timeout of attesting from OpenAttestation.properties. In generally, it is usually set as 60 seconds;
@@ -205,27 +82,9 @@ public class AttestService {
 			// Then set the flag as true (trusted) or false(untrusted).
 			String securityProperty = attestRequest.getSecurityProperty();
 			String vmId = attestRequest.getVmId();
-
-			// Here show an example of VM kernel imtegrity. Other cases can be added here.
-			if (securityProperty.equals("1")) {
-				String kernel_id = GetKernelId(securityProperty, vmId);
-				String measure_value = pcrs.get(1);
-				if (kernel_id != null) {
-					flag = CheckKernelIntegrity(kernel_id, measure_value);
-				}
-				else {
-					flag = false;
-				}
-			}
-			if (securityProperty.equals("2")) {
-				String measure_value = pcrs.get(2);
-				flag = CheckAvailability(measure_value);
-			}
-			if (securityProperty.equals("3")) {
-				String measure_value1 = pcrs.get(3);
-				String measure_value2 = pcrs.get(4);
-				flag = CheckConfidentiality(measure_value1, measure_value2);
-			}
+			
+			// add interpretation code later here
+			flag = true;
 			
 			if (!flag){
 				attestRequest.setResult(ResultConverter.getIntFromResult(AttestResult.UN_TRUSTED));
