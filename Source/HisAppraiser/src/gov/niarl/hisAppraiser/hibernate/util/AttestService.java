@@ -79,6 +79,19 @@ public class AttestService {
 				flag = false;
 			}
 
+			String securityProperty = attestRequest.getSecurityProperty();
+			String vmId = attestRequest.getVmId();
+
+			if (securityProperty.equals("1")) { 
+				String measure_value = pcrs.get(1);
+				int num_vul = Integer.parseInt(measure_value.substring(0, 16));
+				if (num_vul == 0) {
+					flag = true;
+				} else {
+					flag = false;
+				}				
+			}
+
 			if (!flag){
 				attestRequest.setResult(ResultConverter.getIntFromResult(AttestResult.UN_TRUSTED));
 			}
