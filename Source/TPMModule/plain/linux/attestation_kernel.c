@@ -4,6 +4,7 @@
 #include <string.h>
 #include <openssl/md5.h>
 #include <errno.h>
+#include <libvirt/libvirt.h>
 
 #define FILE_LOCATION "/root/tpm-emulator/PCR_VALUE"
 #define IMAGE_LOCATION "/opt/stack/data/nova/instances/"
@@ -15,6 +16,31 @@ FILE *image_file;
 char cmd_line[256];
 int bin[30];
 
+static int convert_name(char *uuid, char *name) {
+    virConnectPtr conn = NULL;
+    virDomainPtr dom = NULL;
+
+    conn = virConnectOpenReadOnly(NULL);
+    if (conn == NULL) {
+        fprintf(stderr, "Failed to connect to hypervisor\n");
+        goto error;
+    }
+
+    dom = virDomainLookupByUUIDString(conn, uuid);
+    if (dom == NULL) {
+        fprintf(stderr, "Failed to find Domain %s\n", uuid);
+        goto error;
+    }
+
+    strcpy(name, virDomainGetName(dom));
+    return 0;
+error:
+    if (dom != NULL)
+        virDomainFree(dom);
+    if (conn != NULL)
+        virConnectClose(conn);
+    return -1;
+}
 
 int monitor_integrity(char *uuid) {
     char cursor;
@@ -61,34 +87,16 @@ int monitor_integrity(char *uuid) {
 
 
 int monitor_availability(char *uuid) {
+
+    char instance_name[256];
+    int ret1 = convert_name(uuid, instance_name);
+
     char cursor;
     int i;
-
-    strcpy(file_address, IMAGE_LOCATION);
-    strcat(file_address, uuid);
-    strcat(file_address, "/libvirt.xml");
-
-    image_file = fopen(file_address, "rb");
-    assert(image_file);
-
-    char *line = NULL;
-    char *instance_name = NULL;
-    size_t len = 0;
-    ssize_t read;
     char *ret;
-
-    while ((read = getline(&line, &len, image_file)) != -1) {
-        if (line=strstr(line, "<name>")) {
-            instance_name = strtok(line, ">");
-            instance_name = strtok(NULL, ">");
-            instance_name = strtok(instance_name, "<");
-            break;
-        }
-    }
-
-    fclose(image_file);
-
-    if (instance_name) {
+    ssize_t read;
+    size_t len = 0;
+    if (ret1 == 0) {
         strcpy(cmd_line, "xentop -f -d1 -bi2 | awk '$1 == \"");
         strcat(cmd_line, instance_name);
         strcat(cmd_line, "\" { print $4 }'");
@@ -125,35 +133,19 @@ int monitor_availability(char *uuid) {
 }
 
 int monitor_confidentiality(char *uuid) {
-    char cursor;
-    int i;
 
-    strcpy(file_address, IMAGE_LOCATION);
-    strcat(file_address, uuid);
-    strcat(file_address, "/libvirt.xml");
-
-    image_file = fopen(file_address, "rb");
-    assert(image_file);
-
-    char *line = NULL;
-    char *instance_name = NULL;
-    size_t len = 0;
-    ssize_t read;
-    char *ret;
-
-    while ((read = getline(&line, &len, image_file)) != -1) {
-        if (line=strstr(line, "<name>")) {
-            instance_name = strtok(line, "-");
-            instance_name = strtok(NULL, "-");
-            instance_name = strtok(instance_name, "<");
-            break;
-        }
-    }
-    fclose(image_file);
+    char instance_name[256];
+    int ret1 = convert_name(uuid, instance_name);
 
     int index;
     int sum = 0;
-    if (instance_name) {
+    char cursor;
+    int i;
+    char *ret;
+    ssize_t read;
+    size_t len = 0;
+    char *line = NULL;
+    if (ret1 == 0) {
         image_file = popen("xentrace -D -e 0x2f000 -T 1 temp_res", "r");
         pclose(image_file);
         strcpy(cmd_line, "cat temp_res | xentrace_format formats | grep switch_infprev | grep ");
