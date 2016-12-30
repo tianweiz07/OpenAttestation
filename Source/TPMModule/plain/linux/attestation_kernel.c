@@ -19,7 +19,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
-
+#include <libvirt/libvirt.h>
 
 #define DEST_FILE_LOCATION "/root/tpm-emulator/PCR_VALUE"
 #define TEMP_FILE_LOCATION "/root/temp_log"
@@ -35,6 +35,10 @@
 
 uint64_t reference_sample[REF_SAMPLE];
 uint64_t monitored_sample[MON_SAMPLE];
+
+int *cpu_id;
+int num_vm;
+
 
 uint64_t rdtsc(void) {
     uint64_t a, d;
@@ -78,6 +82,12 @@ static int write_pcr(int pcr_index, int result) {
     return 0;
 }
 
+/**
+ * Get pid from the uuid. 
+ * From ps aux
+ */
+
+/*
 pid_t map_uuid_pid(char* uuid) {
         pid_t vm_pid = -1;
         char cmd[256] = "";
@@ -114,6 +124,7 @@ pid_t map_uuid_pid(char* uuid) {
 
         return vm_pid;
 }
+*/
 
 double KS_Test(uint64_t *sample1, int l1, uint64_t *sample2, int l2) {
 
@@ -142,41 +153,66 @@ double KS_Test(uint64_t *sample1, int l1, uint64_t *sample2, int l2) {
 }
 
 void throttle_down() {
-    system("wrmsr -p 6 0x19A 17");
-    system("wrmsr -p 7 0x19A 17");
-    system("wrmsr -p 8 0x19A 17");
-    system("wrmsr -p 9 0x19A 17");
-    system("wrmsr -p 10 0x19A 17");
-    system("wrmsr -p 11 0x19A 17");
+    char cmd[256] = "";
+    int i;
+    for (i=0; i<num_vm-1; i++) {
+        sprintf(cmd, "wrmsr -p %d 0x19A 17", cpu_id[i]);
+        system(cmd);
+    }
 }
 
 void throttle_up() {
-    system("wrmsr -p 6 0x19A 0");
-    system("wrmsr -p 7 0x19A 0");
-    system("wrmsr -p 8 0x19A 0");
-    system("wrmsr -p 9 0x19A 0");
-    system("wrmsr -p 10 0x19A 0");
-    system("wrmsr -p 11 0x19A 0");
+    char cmd[256] = "";
+    int i;
+    for (i=0; i<num_vm-1; i++) {
+        sprintf(cmd, "wrmsr -p %d 0x19A 0", cpu_id[i]);
+        system(cmd);
+    }
 }
 
 int main(int argc, char **argv) {
 
-    pid_t vm_pid = map_uuid_pid(argv[1]);
-    if (vm_pid == -1)
-        return -1;
-    
+    virConnectPtr conn = NULL;
+    virDomainPtr dom = NULL;    
+    virVcpuInfoPtr vcpuinfo = (virVcpuInfo *)calloc(1, sizeof(virVcpuInfo));
 
-    int core_id = 0;
-
-    cpu_set_t set;
-
-    CPU_ZERO(&set);
-    CPU_SET(core_id, &set);
-    if (sched_setaffinity(vm_pid, sizeof(cpu_set_t), &set)) {
-        fprintf(stderr, "Error set affinity\n")  ;
-        return 0;
+    conn = virConnectOpen(NULL);
+    if (conn == NULL) {
+        fprintf(stderr, "Failed to connect to hypervisor\n");
+        return -1;;
     }
 
+    dom = virDomainLookupByUUIDString(conn, argv[1]);
+    if (dom == NULL) {
+        fprintf(stderr, "Failed to find Domain %s\n", argv[1]);
+        virConnectClose(conn);
+        return -1;
+    }
+
+    char cpumap[1];
+    virDomainGetVcpus(dom, vcpuinfo, 1, cpumap, 1);
+
+    int core_id = vcpuinfo[0].cpu;
+    int vm_id = virDomainGetID(dom);
+
+    num_vm = virConnectNumOfDomains(conn);
+    int *ids = (int *)calloc(num_vm, sizeof(int));
+    cpu_id = (int *)calloc(num_vm-1, sizeof(int));
+    virConnectListDomains(conn, ids, num_vm);
+    int i;
+    int j = 0;
+    for (i=0; i<num_vm; i++) {
+        if (ids[i] !=  vm_id) {
+            dom = virDomainLookupByID(conn, ids[i]);
+            virDomainGetVcpus(dom, vcpuinfo, 1, cpumap, 1);
+            cpu_id[j] = vcpuinfo[0].cpu;
+            j++;
+        }
+    }
+
+
+
+    cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(1, &set);
     if (sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &set)) {
@@ -216,7 +252,7 @@ int main(int argc, char **argv) {
 
     fd1 = syscall(__NR_perf_event_open, &pe1, core_id, -1, -1, 0);
     fd2 = syscall(__NR_perf_event_open, &pe2, core_id, -1, -1, 0);
-    int i, j, k;
+    int k;
     uint64_t start_cycle;
     uint64_t read_access, write_access;
     int flag = 0;
