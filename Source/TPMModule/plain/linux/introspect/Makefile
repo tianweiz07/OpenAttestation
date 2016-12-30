@@ -1,6 +1,7 @@
 CC = gcc
 LIBS = -lvmi -lm
 OPENSSL_LIBS = -lcrypto
+LIBVIRT_LIBS = `pkg-config libvirt --libs`
 
 RM = rm -rf
 
@@ -21,7 +22,7 @@ OBJECTS = $(MAIN).o $(PROCESS_LIST).o $(SYSCALL_CHECK).o  $(IDT_CHECK).o \
 	$(PROCESS_BLOCK).o $(PROCESS_KILL).o
 
 $(MAIN): $(OBJECTS)
-	$(CC) -o $(MAIN) $(OBJECTS) $(LIBS) $(OPENSSL_LIBS)
+	$(CC) -o $(MAIN) $(OBJECTS) $(LIBS) $(OPENSSL_LIBS) $(LIBVIRT_LIBS)
 
 $(OBJECTS): $(VMI).h
 

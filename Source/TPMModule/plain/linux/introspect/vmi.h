@@ -12,6 +12,7 @@
 #include <openssl/md5.h>
 #include <libvmi/libvmi.h>
 #include <libvmi/events.h>
+#include <libvirt/libvirt.h>
 
 /**
  * default is using INT 3 for event notification
@@ -99,7 +100,12 @@ static int read_pcr(int pcr_index) {
 }
 
 static int convert_name(char *uuid, char *name) {
-
+  /*
+   * This is the old method: get name from the libvirt.
+   * New openstack does not have the libvirt xml file
+   * so we have to use a new method: get name from libvirt C API
+   */
+/*
     char cursor;
     char file_address[256];
 
@@ -127,6 +133,31 @@ static int convert_name(char *uuid, char *name) {
     fclose(image_file);
 
     return 0;
+*/
+
+    virConnectPtr conn = NULL;
+    virDomainPtr dom = NULL;
+
+    conn = virConnectOpenReadOnly(NULL);
+    if (conn == NULL) {
+        fprintf(stderr, "Failed to connect to hypervisor\n");
+        goto error;
+    }
+
+    dom = virDomainLookupByUUIDString(conn, uuid);
+    if (dom == NULL) {
+        fprintf(stderr, "Failed to find Domain %s\n", uuid);
+        goto error;
+    }
+
+    strcpy(name, virDomainGetName(dom));
+    return 0;
+error:
+    if (dom != NULL)
+        virDomainFree(dom);
+    if (conn != NULL)
+        virConnectClose(conn);
+    return -1;
 }
 
 static int interrupted = 0;
