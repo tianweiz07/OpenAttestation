@@ -250,8 +250,8 @@ int main(int argc, char **argv) {
     pe2.exclude_host = 0;
     pe2.exclude_guest = 0;
 
-    fd1 = syscall(__NR_perf_event_open, &pe1, core_id, -1, -1, 0);
-    fd2 = syscall(__NR_perf_event_open, &pe2, core_id, -1, -1, 0);
+    fd1 = syscall(__NR_perf_event_open, &pe1, -1, core_id, -1, 0);
+    fd2 = syscall(__NR_perf_event_open, &pe2, -1, core_id, -1, 0);
     int k;
     uint64_t start_cycle;
     uint64_t read_access, write_access;
