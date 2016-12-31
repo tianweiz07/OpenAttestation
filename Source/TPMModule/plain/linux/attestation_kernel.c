@@ -5,49 +5,75 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <string.h>
-#include <math.h>
-#include <sys/ioctl.h>
-#include <linux/perf_event.h>
-#include <asm/unistd.h>
+#include <pthread.h>
 #include <inttypes.h>
 #include <fcntl.h>
 #include <time.h>
+#include <math.h>
+#include <limits.h>
+#include <signal.h>
 #include <assert.h>
-#include <pthread.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <sys/ioctl.h>
+#include <asm/unistd.h>
+#include <linux/perf_event.h>
+#include <libvirt/libvirt.h>
 
+
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
 #define DEST_FILE_LOCATION "/root/tpm-emulator/PCR_VALUE"
-#define TEMP_FILE_LOCATION "/root/temp_log"
+#define IMAGE_LOCATION "/opt/stack/data/nova/instances/"
 
-#define REF_INTERVAL 30000000
-#define MON_INTERVAL 30000000
-#define REF_SAMPLE 100
-#define MON_SAMPLE 100
 
-#define REF_PERIOD 4
-#define MON_PERIOD 3000000000
-#define THRESHOLD 0.5
+#define WINDOW_SIZE 22
+#define constraint WINDOW_SIZE
+#define THRESHOLD_V 0.3
+#define THRESHOLD_A 100
 
-uint64_t reference_sample[REF_SAMPLE];
-uint64_t monitored_sample[MON_SAMPLE];
+#define INTERVAL_V 300000
+#define INTERVAL_A 3000000
 
-uint64_t rdtsc(void) {
-    uint64_t a, d;
-    __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
-    return (d<<32) | a;
-}
+#define NUM_SOCKET 2
 
-int cmpfunc (const void * a, const void * b) {
-    return ( *(int*)a - *(int*)b );
-}
+#define interval_cycle 2500000
+#define windows_a 5
+#define boundary_a 30
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+int terminated;
+uint64_t sig_time;
+
+char *uuid;
+
+int *cpu_id[NUM_SOCKET];
+int sock_num[NUM_SOCKET];
+int core_id;
+int num_vm;
+
+uint64_t begin_stamp;
+int cal_num;
+int cal_lock;
+
+int signature_len;
+int **dtw;
+
+struct node {
+	long long event_value;
+	uint64_t time_value;
+	struct node *next;
+};
+
+struct node *head;
+struct node *end;
+
+int train_set[WINDOW_SIZE];
+int nomi_train_set[WINDOW_SIZE];
+int nomi_test_set[WINDOW_SIZE];
+
 
 /**
  * Write the results to the PCR
@@ -78,6 +104,33 @@ static int write_pcr(int pcr_index, int result) {
     return 0;
 }
 
+/**
+ * Write the results from the PCR
+ */
+static int read_pcr(int pcr_index) {
+    FILE *pcr_file = fopen(DEST_FILE_LOCATION, "r+");
+    assert(pcr_file);
+    char cursor;
+    char value[16] = "";
+    int x;
+
+    int i = 0;
+    while (i<= pcr_index) {
+        cursor = fgetc(pcr_file);
+        if (cursor == ':')
+            i++;
+    }
+    for (i=0; i<16; i++) {
+        value[i] = fgetc(pcr_file);
+        if ((i%2) == 1)
+            x=fgetc(pcr_file);
+    }
+    fclose(pcr_file);
+
+    return (int)strtol(value, NULL, 16);
+}
+
+/*
 pid_t map_uuid_pid(char* uuid) {
         pid_t vm_pid = -1;
         char cmd[256] = "";
@@ -114,83 +167,224 @@ pid_t map_uuid_pid(char* uuid) {
 
         return vm_pid;
 }
+*/
 
-double KS_Test(uint64_t *sample1, int l1, uint64_t *sample2, int l2) {
-
-    qsort(sample1, l1, sizeof(uint64_t), cmpfunc);
-    qsort(sample2, l2, sizeof(uint64_t), cmpfunc);
-    uint64_t *total = malloc((l1+l2)*sizeof(uint64_t));
-    memcpy(total, sample1, l1*sizeof(uint64_t));
-    memcpy(total+l1, sample2, l2*sizeof(uint64_t));
-    qsort(total, l1+l2, sizeof(uint64_t), cmpfunc);
-    int i1 = 0;
-    int i2 = 0;
-    int i = 0;
-    double ks_val = 0.0;
-    while (i < l1+l2) {
-        while (i < l1+l2-1 && total[i] == total[i+1])
-            i ++;
-        while (i1 < l1 && sample1[i1] <= total[i])
-            i1 ++;
-        while (i2 < l2 && sample2[i2] <= total[i])
-            i2 ++;
-        ks_val = MAX(ks_val, fabs(i1*1.0/l1 - i2*1.0/l2));
-        i ++;
-    }
-    return ks_val;
-
+uint64_t rdtsc(void) {
+    uint64_t a, d;
+    __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
+    return (d<<32) | a;
 }
 
-void throttle_down() {
-    system("wrmsr -p 6 0x19A 17");
-    system("wrmsr -p 7 0x19A 17");
-    system("wrmsr -p 8 0x19A 17");
-    system("wrmsr -p 9 0x19A 17");
-    system("wrmsr -p 10 0x19A 17");
-    system("wrmsr -p 11 0x19A 17");
+void cal_average(int *data, int *res) {
+    int sum = 0;
+    int i;
+    for (i=0; i<WINDOW_SIZE; i++)
+        sum += data[i];
+    int average = sum/WINDOW_SIZE;
+    for (i=0; i<WINDOW_SIZE; i++)
+        res[i] = data[i] - average;
+
+    return;
 }
 
-void throttle_up() {
-    system("wrmsr -p 6 0x19A 0");
-    system("wrmsr -p 7 0x19A 0");
-    system("wrmsr -p 8 0x19A 0");
-    system("wrmsr -p 9 0x19A 0");
-    system("wrmsr -p 10 0x19A 0");
-    system("wrmsr -p 11 0x19A 0");
+void cal_average1(struct node* head, int *res, int average) {
+    int sum = 0;
+    int i;
+    struct node* cur = head;
+    for (i=0; i<WINDOW_SIZE; i++) {
+        res[i] = cur->event_value - average;
+        cur = cur->next;
+    }
+
+    return;
 }
 
-int main(int argc, char **argv) {
-
-    pid_t vm_pid = map_uuid_pid(argv[1]);
-    if (vm_pid == -1)
-        return -1;
-    
-
-    int core_id = 0;
-
-    cpu_set_t set;
-
-    CPU_ZERO(&set);
-    CPU_SET(core_id, &set);
-    if (sched_setaffinity(vm_pid, sizeof(cpu_set_t), &set)) {
-        fprintf(stderr, "Error set affinity\n")  ;
-        return 0;
+int DTW_Distance(int *data1, int *data2, int w) {
+    int i, j;
+    for (i=0; i<WINDOW_SIZE+1; i++) {
+        for (j=0; j<WINDOW_SIZE+1; j++) {
+	    dtw[i][j] = INT_MAX;
+        }
     }
 
-    CPU_ZERO(&set);
-    CPU_SET(1, &set);
-    if (sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &set)) {
-        fprintf(stderr, "Error set affinity\n")  ;
-        return 0;
+    dtw[0][0] = 0;
+
+    for (i=1; i<WINDOW_SIZE+1; i++) {
+        for (j=MAX(1, i-w); j<MIN(WINDOW_SIZE, i+w)+1; j++) {
+            dtw[i][j] = abs(data1[i-1]-data2[j-1]) + MIN(dtw[i-1][j-1], MIN(dtw[i][j-1], dtw[i-1][j]));
+        }
     }
 
-    struct perf_event_attr pe1;
-    struct perf_event_attr pe2;
-    int fd1, fd2;
+    return dtw[WINDOW_SIZE][WINDOW_SIZE];
+}
+
+void training() {
+
+    char file_address[256];
+    strcpy(file_address, IMAGE_LOCATION);
+    strcat(file_address, uuid);
+    strcat(file_address, "/training_set");
+
+    FILE *train_file = fopen(file_address, "r");
+    int i;
+    int time;
+    for (i=0; i<WINDOW_SIZE; i++)
+        fscanf(train_file, "%d	%d", &time, &train_set[i]);
+
+    cal_average(train_set, nomi_train_set);
+    signature_len = 0;
+    for (i=0; i<WINDOW_SIZE; i++) 
+        signature_len += abs(nomi_train_set[i]);
+    close(train_file);
+    return;
+}
+
+void *cal_data(void *argv) {
+    int temp = -1;
+    uint64_t next_cycle = 0;
+    while (terminated == 0) {
+        while (cal_lock || temp == cal_num);
+            
+        double distance = (double)DTW_Distance(nomi_train_set, nomi_test_set, constraint)/(double)signature_len;
+        if (distance < THRESHOLD_V && head->time_value > next_cycle) {
+            sig_time = head->time_value;
+            next_cycle = head->time_value + interval_cycle;
+        }
+        temp = cal_num;
+    }
+}
+
+void *perf_victim(void *argv) {
+
+    /* Training the dataset*/
+    training();
+
+    /* Initialize performance counter structures*/
+    struct perf_event_attr pe;
+    int fd;
+    int j;
+    memset(&pe, 0, sizeof(struct perf_event_attr));
+    pe.type = PERF_TYPE_HARDWARE;
+    pe.config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+    pe.size = sizeof(struct perf_event_attr);
+    pe.disabled = 1;
+    pe.inherit = 0;
+    pe.pinned = 1;
+    pe.exclude_kernel = 0;
+    pe.exclude_user = 0;
+    pe.exclude_hv = 0;
+    pe.exclude_host = 0;
+    pe.exclude_guest = 0;
+
+    fd = syscall(__NR_perf_event_open, &pe, -1, core_id, -1, 0);
+
+    /* First round */
+    struct node *start = (struct node*)malloc(sizeof(struct node));
+    struct node *cur = start;
+
+    uint64_t start_cycle;
+    while(begin_stamp!= 0);
+    begin_stamp = rdtsc();
+    for (j=0; j<WINDOW_SIZE; j++) {
+        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+
+        start_cycle = rdtsc();
+        while(rdtsc()-start_cycle<INTERVAL_V);
+
+        ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+        struct node *item = (struct node*)malloc(sizeof(struct node));
+        cur->next = item;
+        read(fd, &(item->event_value), sizeof(long long));
+        item->time_value = (start_cycle-begin_stamp)/1000;
+        cur = item;
+    }
+    cur->next = start;
+    head = start;
+    end = cur;
+
+    long long sum = 0;
+    cur = head;
+    int i;
+    for (i = 0; i<WINDOW_SIZE; i++) {
+        sum += cur->event_value;
+        cur = cur->next;
+    }
+
+    int average = sum/WINDOW_SIZE;
+    cal_average1(head, nomi_test_set, average);
+	
+    /* running profiling and calculation*/
+    int k;
+    while (terminated == 0) {
+        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+
+        start_cycle = rdtsc();
+        while(rdtsc()-start_cycle<INTERVAL_V);
+
+        ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+		
+        cal_lock = 1;
+        sum -= head->event_value;
+        head = head->next;
+        end = end->next;
+
+        read(fd, &(end->event_value), sizeof(long long));
+        end->time_value = (start_cycle-begin_stamp)/1000;
+        sum += end->event_value;
+        average = sum/WINDOW_SIZE;
+        cal_average1(head, nomi_test_set, average);
+        cal_num ++;
+        cal_lock = 0;
+
+    }
+
+    close(fd);
+
+    return;
+}
+
+void *perf_attacker(void *argv) {
+
+    int i, j;
+    uint64_t value, value1;
+
+    int sock_id = core_id % NUM_SOCKET;
+    uint64_t **time_a = (uint64_t **)calloc(sock_num[sock_id], sizeof(uint64_t *));
+    long long **event_h = (long long **)calloc(sock_num[sock_id], sizeof(long long *));
+    long long **event_m = (long long **)calloc(sock_num[sock_id], sizeof(long long *));
+    int *index_a = (int *)calloc(sock_num[sock_id], sizeof(int));
+    int *index_e = (int *)calloc(sock_num[sock_id], sizeof(int));
+
+    for (i=0; i<sock_num[sock_id]; i++) {
+        time_a[i] = (uint64_t *)calloc(1024, sizeof(uint64_t));
+        event_h[i] = (long long *)calloc(1024, sizeof(long long));
+        event_m[i] = (long long *)calloc(1024, sizeof(long long));
+        index_a[i] = -1;
+        index_e[i] = -1;
+    }
+
+
+    struct perf_event_attr pe, pe1;
+    int fd, fd1;
+
+    memset(&pe, 0, sizeof(struct perf_event_attr));
+    pe.type = PERF_TYPE_HW_CACHE;
+    pe.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_READ << 8)|(PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+    pe.size = sizeof(struct perf_event_attr);
+    pe.disabled = 1;
+    pe.inherit = 0;
+    pe.pinned = 1;
+    pe.exclude_kernel = 0;
+    pe.exclude_user = 0;
+    pe.exclude_hv = 0;
+    pe.exclude_host = 0;
+    pe.exclude_guest = 0;
 
     memset(&pe1, 0, sizeof(struct perf_event_attr));
     pe1.type = PERF_TYPE_HW_CACHE;
-    pe1.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_WRITE << 8)|(PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16);
+    pe1.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_READ << 8)|(PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16);
     pe1.size = sizeof(struct perf_event_attr);
     pe1.disabled = 1;
     pe1.inherit = 0;
@@ -201,74 +395,180 @@ int main(int argc, char **argv) {
     pe1.exclude_host = 0;
     pe1.exclude_guest = 0;
 
-    memset(&pe2, 0, sizeof(struct perf_event_attr));
-    pe2.type = PERF_TYPE_HW_CACHE;
-    pe2.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_READ << 8)|(PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16);
-    pe2.size = sizeof(struct perf_event_attr);
-    pe2.disabled = 1;
-    pe2.inherit = 0;
-    pe2.pinned = 1;
-    pe2.exclude_kernel = 0;
-    pe2.exclude_user = 0;
-    pe2.exclude_hv = 0;
-    pe2.exclude_host = 0;
-    pe2.exclude_guest = 0;
-
-    fd1 = syscall(__NR_perf_event_open, &pe1, core_id, -1, -1, 0);
-    fd2 = syscall(__NR_perf_event_open, &pe2, core_id, -1, -1, 0);
-    int i, j, k;
     uint64_t start_cycle;
-    uint64_t read_access, write_access;
-    int flag = 0;
 
-    throttle_down();
-    for (j = 0; j<REF_SAMPLE; j++) {
-        ioctl(fd1, PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd2, PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd1, PERF_EVENT_IOC_ENABLE, 0);
-        ioctl(fd2, PERF_EVENT_IOC_ENABLE, 0);
+    begin_stamp = 0;
+    while (begin_stamp == 1);
+    while (terminated == 0) {
+        for (i=0; i<sock_num[sock_id]; i++) {
+            fd = syscall(__NR_perf_event_open, &pe, -1, cpu_id[sock_id][i], -1, 0);
+            fd1 = syscall(__NR_perf_event_open, &pe1, -1, cpu_id[sock_id][i], -1, 0);
 
-        start_cycle = rdtsc();
-        while(rdtsc() - start_cycle < REF_INTERVAL);
-
-        ioctl(fd1, PERF_EVENT_IOC_DISABLE, 0);
-        ioctl(fd2, PERF_EVENT_IOC_DISABLE, 0);
-        read(fd1, &read_access, sizeof(uint64_t));
-        read(fd2, &write_access, sizeof(uint64_t));
-        reference_sample[j] = read_access + write_access;
-    }
-    throttle_up();
-    for (k = 0; k<REF_PERIOD; k++) {
-        start_cycle = rdtsc();
-        while(rdtsc() - start_cycle < MON_PERIOD);
-        for (j = 0; j<MON_SAMPLE; j++) {
+            ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+            ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
             ioctl(fd1, PERF_EVENT_IOC_RESET, 0);
-            ioctl(fd2, PERF_EVENT_IOC_RESET, 0);
             ioctl(fd1, PERF_EVENT_IOC_ENABLE, 0);
-            ioctl(fd2, PERF_EVENT_IOC_ENABLE, 0);
-
+      			        
             start_cycle = rdtsc();
-            while(rdtsc() - start_cycle < MON_INTERVAL);
-
+            while(rdtsc()-start_cycle<INTERVAL_A);
+		                
+            ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+            read(fd, &value, sizeof(long long));
             ioctl(fd1, PERF_EVENT_IOC_DISABLE, 0);
-            ioctl(fd2, PERF_EVENT_IOC_DISABLE, 0);
-            read(fd1, &read_access, sizeof(uint64_t));
-            read(fd2, &write_access, sizeof(uint64_t));
-            monitored_sample[j] = read_access + write_access;
+            read(fd1, &value1, sizeof(long long));
+
+            close(fd);
+            close(fd1);
+
+
+            index_a[i] = (index_a[i] + 1)%1024;
+            event_h[i][index_a[i]] = value1-value;
+            event_m[i][index_a[i]] = value;
+            time_a[i][index_a[i]] = (start_cycle-begin_stamp)/1000;
+
+            if (sig_time > 0 && time_a[i][index_a[i]] > sig_time) {
+                if (index_e[i] == -1) {
+                    index_e[i] = index_a[i];
+                } else if (index_a[i]-index_e[i] >= windows_a+boundary_a || (index_a[i] < index_e[i] && index_a[i]+1024-index_e[i] >= windows_a+boundary_a)) {
+                    long long l_m = INT_MIN;
+                    long long r_m = INT_MAX;
+                    long long l_h = INT_MIN; 
+                    long long r_h = INT_MAX;
+                    for (j=0; j<windows_a; j++) {
+                       l_m = MAX(l_m, event_m[i][(index_e[i]-j+1024)%1024]);
+                       r_m = MIN(r_m, event_m[i][(index_e[i]+boundary_a+j)%1024]);
+                       l_h = MAX(l_h, event_h[i][(index_e[i]-j+1024)%1024]);
+                       r_h = MIN(r_h, event_h[i][(index_e[i]+boundary_a+j)%1024]);
+                    }
+                    if (r_m - l_m > THRESHOLD_A || r_h - l_h > THRESHOLD_A) {
+                        terminated = 1;
+                    } else {
+                        index_e[i] = -1;
+                        sig_time = -1;
+                    }
+                }
+            }
         }
-        double ret = KS_Test(reference_sample, REF_SAMPLE, monitored_sample, MON_SAMPLE);
-        if (ret < THRESHOLD)
-            flag = 1;
     }
 
-    if (flag == 0) {
-        throttle_down();
-        write_pcr(1, 1);
-    } else {
-        write_pcr(1, 0);
-    }
-    close(fd1);
-    close(fd2);
+    return 0;
+}
 
+int main(int argc, char **argv) {
+    if (strncmp(argv[2], "FFFFFFFF", 100) == 0)
+        return 0;
+
+    uuid = argv[1];
+    int pcr_index = atoi(argv[2]);
+
+    pid_t pid;
+    char cmd_line[256];
+    FILE *output;
+    char _line[256];
+    char arg1[256];
+    char arg2[256];
+
+    if (pcr_index == 1) {
+	/* start side-channel detection */
+	write_pcr(1, 0);
+	write_pcr(2, 0);
+	pid = fork();
+	if (pid == 0) {
+
+            virConnectPtr conn = NULL;
+            virDomainPtr dom = NULL;    
+            virDomainPtr dom1 = NULL;    
+            virVcpuInfoPtr vcpuinfo = (virVcpuInfo *)calloc(1, sizeof(virVcpuInfo));
+
+            conn = virConnectOpen(NULL);
+            if (conn == NULL) {
+                fprintf(stderr, "Failed to connect to hypervisor\n");
+                return -1;;
+            }
+
+            dom = virDomainLookupByUUIDString(conn, uuid);
+            if (dom == NULL) {
+                fprintf(stderr, "Failed to find Domain %s\n", argv[1]);
+                virConnectClose(conn);
+                return -1;
+            }
+
+            char cpumap[1];
+            virDomainGetVcpus(dom, vcpuinfo, 1, cpumap, 1);
+
+            core_id = vcpuinfo[0].cpu;
+            int vm_id = virDomainGetID(dom);
+
+            num_vm = virConnectNumOfDomains(conn);
+            int *ids = (int *)calloc(num_vm, sizeof(int));
+            virConnectListDomains(conn, ids, num_vm);
+
+            int i;
+
+            for (i=0; i<NUM_SOCKET; i++)
+                sock_num[i] = 0;
+            
+            for (i=0; i<num_vm; i++) {
+                if (ids[i] !=  vm_id) {
+                    dom1 = virDomainLookupByID(conn, ids[i]);
+                    virDomainGetVcpus(dom1, vcpuinfo, 1, cpumap, 1);
+                    int socket_id = vcpuinfo[0].cpu % NUM_SOCKET;
+                    cpu_id[socket_id] = realloc(cpu_id[socket_id], sizeof(int) * ++sock_num[socket_id]);
+                    cpu_id[socket_id][sock_num[socket_id]-1] = vcpuinfo[0].cpu;
+                }
+            }
+
+
+           dtw = (int **)malloc(sizeof(int *)*(WINDOW_SIZE+1));
+	   for (i=0; i<WINDOW_SIZE+1; i++)
+	       dtw[i] = (int *)malloc(sizeof(int)*(WINDOW_SIZE+1));
+
+            begin_stamp = 0;
+            sig_time = -1;
+            cal_num = 0;
+            cal_lock = 1;
+            terminated = 0;
+
+
+            pthread_t profile_victim, profile_attacker, process_data;
+
+            pthread_create(&profile_victim, NULL, perf_victim, NULL);
+            pthread_create(&process_data, NULL, cal_data, NULL);
+            pthread_create(&profile_attacker, NULL, perf_attacker, NULL);
+
+            pthread_join(profile_victim, NULL);
+            pthread_join(process_data, NULL);
+            pthread_join(profile_attacker, NULL);
+
+            if (terminated == 1) {
+                write_pcr(1, 1);
+
+                cpumap[0] = (1<<((core_id+1)%NUM_SOCKET));
+                virDomainPinVcpu(dom, 0, cpumap, 1);
+                
+            }
+        }
+
+    }
+    if (pcr_index == 2) {
+            /* stop side-channel detection */
+            strcpy(cmd_line, "ps ax | grep attestation_kernel | awk '{print $1\" \"$6\" \"$7}'");
+            output = popen(cmd_line, "r");
+            while(fgets(_line, sizeof(_line), output) != NULL) {
+                sscanf(_line, "%d %s %s", &pid, arg1, arg2);
+                if (strcmp(arg1, uuid) == 0 && strcmp(arg2, "1") == 0) {
+                    kill(pid, SIGTERM);
+                    break;
+                }
+            }
+            /* reset the PCR values */
+            write_pcr(1, 0);
+    }
+    if (pcr_index == 3) {
+           /* retrieve result of side-channel detection */
+            write_pcr(2, read_pcr(1));
+            write_pcr(1, 0);
+    }
+    
     return 0;
 }

@@ -82,8 +82,11 @@ public class AttestService {
 			String securityProperty = attestRequest.getSecurityProperty();
 			String vmId = attestRequest.getVmId();
 
-			if (securityProperty.equals("1")) { 
-				String measure_value = pcrs.get(1);
+			if (securityProperty.equals("1") || securityProperty.equals("2")) { 
+				flag = true;
+			}
+			if (securityProperty.equals("3")) {
+				String measure_value = pcrs.get(2);
 				int num_vul = Integer.parseInt(measure_value.substring(0, 16));
 				if (num_vul == 0) {
 					flag = true;

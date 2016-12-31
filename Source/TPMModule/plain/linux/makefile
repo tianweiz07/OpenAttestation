@@ -48,7 +48,7 @@ NIARL_TPM_Module: $(OBJS) $(USER_OBJS)
 	@echo ' '
 	
 attestation_kernel:
-	gcc -o attestation_kernel attestation_kernel.c
+	gcc -o attestation_kernel attestation_kernel.c -lpthread -lm `pkg-config libvirt --libs`
 
 # Other Targets
 clean:
